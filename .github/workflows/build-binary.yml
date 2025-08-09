@@ -1,0 +1,222 @@
+name: Build Binary
+
+on:
+  push:
+    tags:
+      - 'v*'
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
+
+env:
+  CARGO_TERM_COLOR: always
+
+permissions:
+  contents: write
+  packages: write
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Install Rust
+      uses: dtolnay/rust-toolchain@stable
+
+    - name: Run tests
+      run: cargo test --all-features
+
+    - name: Run clippy
+      run: cargo clippy --all-targets --all-features -- -D warnings
+
+  build-binary:
+    needs: test
+    strategy:
+      matrix:
+        include:
+          - os: ubuntu-latest
+            target: x86_64-unknown-linux-gnu
+            name: ubuntu-x86_64
+          - os: ubuntu-latest
+            target: aarch64-unknown-linux-gnu
+            name: ubuntu-aarch64
+          - os: ubuntu-latest
+            target: x86_64-unknown-linux-gnu
+            name: debian-latest-x86_64
+            container: debian:latest
+          - os: ubuntu-latest
+            target: aarch64-unknown-linux-gnu
+            name: debian-latest-aarch64
+            container: debian:latest
+          - os: ubuntu-latest
+            target: x86_64-unknown-linux-gnu
+            name: debian12-x86_64
+            container: debian:12
+          - os: ubuntu-latest
+            target: aarch64-unknown-linux-gnu
+            name: debian12-aarch64
+            container: debian:12
+    runs-on: ${{ matrix.os }}
+    container: ${{ matrix.container }}
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Setup Debian environment
+      if: startsWith(matrix.container, 'debian:')
+      shell: bash
+      run: |
+        apt-get update
+        apt-get install -y curl build-essential gcc pkg-config libssl-dev jq
+
+    - name: Install Rust
+      if: "!startsWith(matrix.container, 'debian:')"
+      uses: dtolnay/rust-toolchain@stable
+      with:
+        targets: ${{ matrix.target }}
+
+    - name: Install Rust in Debian container
+      if: startsWith(matrix.container, 'debian:')
+      shell: bash
+      run: |
+        curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --default-toolchain stable
+        . ~/.cargo/env
+        rustup target add ${{ matrix.target }}
+
+    - name: Install cross-compilation tools
+      if: matrix.target == 'aarch64-unknown-linux-gnu'
+      shell: bash
+      run: |
+        if [ "${{ matrix.container }}" != "" ]; then
+          apt-get install -y gcc-aarch64-linux-gnu
+        else
+          sudo apt-get update
+          sudo apt-get install -y gcc-aarch64-linux-gnu
+        fi
+
+    - name: Cache cargo
+      uses: actions/cache@v4
+      with:
+        path: |
+          ~/.cargo/bin/
+          ~/.cargo/registry/index/
+          ~/.cargo/registry/cache/
+          ~/.cargo/git/db/
+          target/
+        key: ${{ runner.os }}-cargo-${{ matrix.target }}-${{ hashFiles('**/Cargo.lock') }}
+
+    - name: Configure cross-compilation
+      if: matrix.target == 'aarch64-unknown-linux-gnu'
+      shell: bash
+      run: |
+        mkdir -p ~/.cargo
+        echo '[target.aarch64-unknown-linux-gnu]' >> ~/.cargo/config.toml
+        echo 'linker = "aarch64-linux-gnu-gcc"' >> ~/.cargo/config.toml
+
+    - name: Build release binary (Debian)
+      if: startsWith(matrix.container, 'debian:')
+      shell: bash
+      run: |
+        . ~/.cargo/env
+        cargo build --release --target ${{ matrix.target }}
+
+    - name: Build release binary (Ubuntu)
+      if: "!startsWith(matrix.container, 'debian:')"
+      run: cargo build --release --target ${{ matrix.target }}
+
+    - name: Get version info
+      id: version
+      shell: bash
+      run: |
+        if [ "${{ matrix.container }}" != "" ]; then
+          . ~/.cargo/env
+        fi
+        VERSION=$(cargo metadata --format-version 1 | jq -r '.packages[] | select(.name == "ackbarx") | .version')
+        ARCH=$(echo ${{ matrix.target }} | cut -d'-' -f1)
+        echo "version=$VERSION" >> $GITHUB_OUTPUT
+        echo "arch=$ARCH" >> $GITHUB_OUTPUT
+        echo "target=${{ matrix.target }}" >> $GITHUB_OUTPUT
+        echo "name=${{ matrix.name }}" >> $GITHUB_OUTPUT
+
+    - name: Prepare binary for upload
+      shell: bash
+      run: |
+        mkdir -p release-artifacts
+        cp target/${{ matrix.target }}/release/ackbarx release-artifacts/ackbarx-${{ steps.version.outputs.version }}-${{ steps.version.outputs.name }}
+        chmod +x release-artifacts/ackbarx-${{ steps.version.outputs.version }}-${{ steps.version.outputs.name }}
+
+    - name: Upload binary
+      uses: actions/upload-artifact@v4
+      with:
+        name: ackbarx-${{ steps.version.outputs.version }}-${{ steps.version.outputs.name }}
+        path: release-artifacts/ackbarx-${{ steps.version.outputs.version }}-${{ steps.version.outputs.name }}
+        retention-days: 30
+
+  release:
+    if: startsWith(github.ref, 'refs/tags/')
+    needs: build-binary
+    runs-on: ubuntu-latest
+    steps:
+    - name: Download all artifacts
+      uses: actions/download-artifact@v4
+
+    - name: Create Release
+      uses: softprops/action-gh-release@v2
+      with:
+        files: |
+          ackbarx-*/ackbarx-*
+        generate_release_notes: true
+        draft: false
+        prerelease: false
+        token: ${{ secrets.GITHUB_TOKEN }}
+        body: |
+          ## AckbarX ${{ github.ref_name }} - SNMP Trap Forwarder
+          
+          This release includes binaries for multiple architectures and distributions:
+          - `ubuntu-x86_64`: Ubuntu/Intel AMD 64-bit systems
+          - `ubuntu-aarch64`: Ubuntu/ARM64 systems (Apple Silicon, ARM servers)
+          - `debian-latest-x86_64`: Debian Latest/Intel AMD 64-bit systems
+          - `debian-latest-aarch64`: Debian Latest/ARM64 systems
+          - `debian12-x86_64`: Debian 12/Intel AMD 64-bit systems
+          - `debian12-aarch64`: Debian 12/ARM64 systems
+          
+          ### Installation
+          ```bash
+          # Download the appropriate binary for your system
+          # For Ubuntu x86_64:
+          wget https://github.com/gocortex/ackbarx/releases/download/${{ github.ref_name }}/ackbarx-${{ github.ref_name }}-ubuntu-x86_64
+          
+          # For Debian latest x86_64:
+          wget https://github.com/gocortex/ackbarx/releases/download/${{ github.ref_name }}/ackbarx-${{ github.ref_name }}-debian-latest-x86_64
+          
+          # For Debian 12 x86_64:
+          wget https://github.com/gocortex/ackbarx/releases/download/${{ github.ref_name }}/ackbarx-${{ github.ref_name }}-debian12-x86_64
+          
+          # Make it executable
+          chmod +x ackbarx-${{ github.ref_name }}-*
+          
+          # Move to system PATH (optional)
+          sudo mv ackbarx-${{ github.ref_name }}-* /usr/local/bin/ackbarx
+          ```
+          
+          ### Usage
+          ```bash
+          # Generate configuration
+          ./ackbarx --generate-config
+          
+          # Start with configuration
+          ./ackbarx --config config.json
+          
+          # Get help
+          ./ackbarx --help
+          ```
+          
+          ### Technical Details
+          - **Built with Rust:** High performance and memory safety
+          - **SNMP Integration:** Multi-protocol support (v1, v2c, v3)
+          - **Cross-platform:** Multiple Linux distributions supported
+          - **Production Ready:** File-based caching and graceful shutdown

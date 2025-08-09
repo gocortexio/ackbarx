@@ -1,6 +1,7 @@
 # AckbarX - Enterprise SNMP Trap Forwarder
 
-**Version 0.4.8 - Production Ready**
+**Version 0.4.8 - Known Issue**
+https://github.com/gocortexio/ackbarx/issues/1
 
 AckbarX is a robust Rust-based SNMP Trap Forwarder developed by GoCortex.io to bridge traditional SNMP monitoring infrastructure with modern HTTP-based log ingestion systems, specifically targeting Cortex XSIAM/XDR platforms.
 

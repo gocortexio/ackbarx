@@ -25,8 +25,8 @@ use std::collections::HashMap;
 async fn main() -> Result<()> {
     // Parse command line arguments
     let matches = Command::new("ackbarx")
-        .version("0.4.8")
-        .about("AckbarX is a robust Rust-based SNMP Trap to XSIAM/XDR HTTP logging integration.\n\nhttps://gocortex.io\n\nVersion: 0.4.8")
+        .version("0.5.0")
+        .about("AckbarX is a robust Rust-based SNMP Trap to XSIAM/XDR HTTP logging integration.\n\nhttps://gocortex.io\n\nVersion: 0.5.0")
         .arg(
             Arg::new("config")
                 .short('c')
@@ -77,7 +77,7 @@ async fn main() -> Result<()> {
     // Initialize logging
     initialise_logging(&config, daemon_mode)?;
 
-    info!("Starting AckbarX v0.4.8 by GoCortex.io");
+    info!("Starting AckbarX v0.5.0 by GoCortex.io");
     info!("Configuration loaded from: {}", config_path.display());
 
     // Validate configuration

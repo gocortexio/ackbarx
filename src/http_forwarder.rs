@@ -86,7 +86,7 @@ impl HttpForwarder {
                             
                             match self.forward_trap(&trap, endpoint).await {
                                 Ok(()) => {
-                                    info!("Successfully forwarded trap {} to {} ({})", trap.id, endpoint.name, endpoint.url);
+                                    debug!("Successfully forwarded trap {} to {} ({})", trap.id, endpoint.name, endpoint.url);
                                     forwarded_successfully = true;
                                     
                                     // Notify cache manager to remove the trap if it was cached
@@ -103,7 +103,7 @@ impl HttpForwarder {
                         // Cache once per trap if forwarding failed to all endpoints
                         if !forwarded_successfully && current_trap.is_some() {
                             let trap_id = trap.id.clone();
-                            info!("Forwarding failed for trap {} to all {} endpoints, caching once for retry", trap_id, self.endpoints.len());
+                            debug!("Forwarding failed for trap {} to all {} endpoints, caching once for retry", trap_id, self.endpoints.len());
                             
                             // EMERGENCY DEBUG: Check cache channel state before sending
                             if self.cache_sender.is_closed() {
@@ -246,7 +246,7 @@ impl HttpForwarder {
         let status = response.status();
         
         if response.status().is_success() {
-            info!("HTTP request to {} successful: {} ({})", endpoint.name, status.as_u16(), status.canonical_reason().unwrap_or("OK"));
+            debug!("HTTP request to {} successful: {} ({})", endpoint.name, status.as_u16(), status.canonical_reason().unwrap_or("OK"));
             Ok(())
         } else {
             let body = response.text().await.unwrap_or_else(|_| "No response body".to_string());

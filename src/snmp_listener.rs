@@ -90,7 +90,7 @@ impl SnmpListener {
                     
                     // Log high-rate activity for diagnostics
                     if packet_count % 1000 == 0 {
-                        info!("Processed {} UDP packets on port {}", packet_count, self.config.port);
+                        debug!("Processed {} UDP packets on port {}", packet_count, self.config.port);
                     }
                     
                     // Process the trap in a separate task to avoid blocking the listener

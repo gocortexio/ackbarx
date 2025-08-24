@@ -1,8 +1,5 @@
 # AckbarX - Enterprise SNMP Trap Forwarder
 
-**Version 0.4.8 - Known Issue**
-https://github.com/gocortexio/ackbarx/issues/1
-
 AckbarX is a robust Rust-based SNMP Trap Forwarder developed by GoCortex.io to bridge traditional SNMP monitoring infrastructure with modern HTTP-based log ingestion systems, specifically targeting Cortex XSIAM/XDR platforms.
 
 ## Key Features
@@ -196,6 +193,31 @@ cargo build --release
 ./target/release/ackbarx --help
 ```
 
+## Installation
+
+### Recommended Installation (Production)
+```bash
+# Create application directory
+sudo mkdir -p /opt/ackbarx
+cd /opt/ackbarx
+
+# Copy binary and set permissions
+sudo cp /path/to/target/release/ackbarx ./
+sudo chmod +x ackbarx
+
+# Create symlink for system-wide access
+sudo ln -sf /opt/ackbarx/ackbarx /usr/local/bin/ackbarx
+
+# Generate initial configuration
+sudo /opt/ackbarx/ackbarx --generate-simple-config
+```
+
+**Why `/opt/ackbarx`?**
+- AckbarX creates cache directories (`./cache/`)
+- Generates log files (`./ackbarx.log`)
+- Stores configuration (`./config.json`)
+- Needs a dedicated working directory, not just the binary path
+
 ## Command Line Options
 
 ```bash
@@ -239,13 +261,7 @@ Options:
 4. **Verify Cache Redundancy**: Ensure both endpoint cache directories are populated
 5. **Test Graceful Shutdown**: Verify zero data loss during service restarts
 
-## v0.4.8 Production Improvements
 
-- **Enterprise Ready**: Resolved critical cache preservation issues affecting 8,000+ UDP packets
-- **Zero Data Loss**: Atomic shutdown coordination prevents HTTP retry delays
-- **Full Redundancy**: All traps cached to multiple endpoint directories
-- **Enhanced Diagnostics**: Improved logging with clear cache operation visibility
-- **Simplified Deployment**: Auto-generation of simple configs for quick starts
 
 ## Troubleshooting
 
@@ -266,4 +282,4 @@ Options:
 ---
 
 **Developed by GoCortex.io**
-**Version 0.4.8 - August 2025**
+**Version 0.5.0 - August 2025**

@@ -143,7 +143,7 @@ impl CacheManagerShared {
             .await
             .with_context(|| format!("Failed to write trap to file: {}", file_path.display()))?;
 
-        info!("Successfully cached trap {} to {}", trap.id, sanitized_instance);
+        debug!("Successfully cached trap {} to {}", trap.id, sanitized_instance);
         Ok(())
     }
     
@@ -633,7 +633,7 @@ impl CacheManager {
 
         // Retry processing task
         let retry_task = tokio::spawn(async move {
-            let mut retry_interval = interval(TokioDuration::from_secs(60)); // Retry every minute
+            let mut retry_interval = interval(TokioDuration::from_secs(10)); // Retry every 10 seconds
 
             loop {
                 retry_interval.tick().await;
@@ -678,7 +678,7 @@ impl CacheManager {
                 if let Err(e) = success_manager.remove_trap(&trap_id, &target_instance).await {
                     warn!("Failed to remove trap {} from cache: {}", trap_id, e);
                 } else {
-                    info!("Removed successfully forwarded trap {} from cache", trap_id);
+                    debug!("Removed successfully forwarded trap {} from cache", trap_id);
                 }
             }
             debug!("Success notification receiver closed");

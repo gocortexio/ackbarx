@@ -339,7 +339,7 @@ impl EndpointHealthChecker {
             .trim_end_matches("/logs/v1/event")
             .trim_end_matches("/")
             .to_string();
-        let health_url = format!("{}/health", base_url);
+        let health_url = format!("{base_url}/health");
         
         match self.client.get(&health_url).send().await {
             Ok(response) => response.status().is_success(),

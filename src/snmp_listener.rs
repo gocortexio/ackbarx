@@ -70,7 +70,7 @@ impl SnmpListener {
         let bind_addr = format!("{}:{}", self.config.bind_address, self.config.port);
         let socket = UdpSocket::bind(&bind_addr)
             .await
-            .context(format!("Failed to bind to {}", bind_addr))?;
+            .context(format!("Failed to bind to {bind_addr}"))?;
         
         // Set larger socket buffer to handle high-throughput bursts
         // Note: Tokio UdpSocket doesn't expose buffer size methods directly
@@ -89,8 +89,8 @@ impl SnmpListener {
                     let listener = Arc::clone(&self);
                     
                     // Log high-rate activity for diagnostics
-                    if packet_count % 1000 == 0 {
-                        debug!("Processed {} UDP packets on port {}", packet_count, self.config.port);
+                    if packet_count.is_multiple_of(1000) {
+                        debug!("Processed {packet_count} UDP packets on port {}", self.config.port);
                     }
                     
                     // Process the trap in a separate task to avoid blocking the listener
@@ -136,7 +136,7 @@ impl SnmpListener {
                 let rejected_trap = RejectedTrap {
                     trap: minimal_trap,
                     rejected_at: Utc::now(),
-                    rejection_reason: format!("SNMP parsing failed: {}", e),
+                    rejection_reason: format!("SNMP parsing failed: {e}"),
                     validation_failure: ValidationFailureType::UnparseableData { 
                         parse_error: e.to_string() 
                     },
@@ -241,7 +241,7 @@ impl SnmpListener {
             0 => ("v1".to_string(), SnmpVersion::V1),
             1 => ("v2c".to_string(), SnmpVersion::V2c),
             3 => ("v3".to_string(), SnmpVersion::V3),
-            v => (format!("unknown({})", v), SnmpVersion::Unknown),
+            v => (format!("unknown({v})"), SnmpVersion::Unknown),
         };
         
         // Move to community string (skip version INTEGER: tag + length + value)

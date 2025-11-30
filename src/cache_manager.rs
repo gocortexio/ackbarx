@@ -86,7 +86,7 @@ impl CacheManagerShared {
             "COM1" | "COM2" | "COM3" | "COM4" | "COM5" | "COM6" | "COM7" | "COM8" | "COM9" |
             "LPT1" | "LPT2" | "LPT3" | "LPT4" | "LPT5" | "LPT6" | "LPT7" | "LPT8" | "LPT9"
         ) {
-            sanitized = format!("endpoint_{}", sanitized);
+            sanitized = format!("endpoint_{sanitized}");
         }
 
         // Ensure name is not empty and doesn't start/end with dots or spaces
@@ -272,7 +272,7 @@ impl CacheManagerShared {
             let file_path = entry.path();
             if file_path.file_name()
                 .and_then(|n| n.to_str())
-                .map(|n| n.starts_with(&format!("{}_", trap_id)))
+                .map(|n| n.starts_with(&format!("{trap_id}_")))
                 .unwrap_or(false)
             {
                 if let Ok(mut cached_trap) = self.read_cached_trap(&file_path).await {
@@ -497,7 +497,7 @@ impl CacheManagerShared {
             let file_path = entry.path();
             if file_path.file_name()
                 .and_then(|n| n.to_str())
-                .map(|n| n.starts_with(&format!("{}_", trap_id)))
+                .map(|n| n.starts_with(&format!("{trap_id}_")))
                 .unwrap_or(false)
             {
                 file_paths.push(file_path);

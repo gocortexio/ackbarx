@@ -293,7 +293,7 @@ impl Config {
 
             // 2. Validate IP address pattern
             self.validate_ip_pattern(source_pattern)
-                .with_context(|| format!("Invalid source pattern: '{}'", source_pattern))?;
+                .with_context(|| format!("Invalid source pattern: '{source_pattern}'"))?;
         }
 
         Ok(())
@@ -315,13 +315,13 @@ impl Config {
         if pattern.contains('/') {
             return pattern.parse::<IpNet>()
                 .map(|_| ())
-                .with_context(|| format!("Invalid CIDR notation: {}", pattern));
+                .with_context(|| format!("Invalid CIDR notation: {pattern}"));
         }
 
         // Handle individual IP address
         pattern.parse::<IpAddr>()
             .map(|_| ())
-            .with_context(|| format!("Invalid IP address: {}", pattern))
+            .with_context(|| format!("Invalid IP address: {pattern}"))
     }
 
     /// Validate wildcard patterns like "192.168.1.*" or "2001:db8::*"
@@ -361,7 +361,7 @@ impl Config {
                 
                 for part in parts {
                     let octet: u16 = part.parse()
-                        .with_context(|| format!("Invalid IPv4 octet: {}", part))?;
+                        .with_context(|| format!("Invalid IPv4 octet: {part}"))?;
                     if octet > 255 {
                         return Err(anyhow!("IPv4 octet out of range: {}", octet));
                     }
@@ -503,11 +503,11 @@ impl Config {
 
         // Validate network address
         let network_addr = network_part.parse::<IpAddr>()
-            .with_context(|| format!("Invalid network address in CIDR: {}", network_part))?;
+            .with_context(|| format!("Invalid network address in CIDR: {network_part}"))?;
 
         // Validate prefix length
         let prefix_len: u8 = prefix_part.parse()
-            .with_context(|| format!("Invalid prefix length: {}", prefix_part))?;
+            .with_context(|| format!("Invalid prefix length: {prefix_part}"))?;
 
         // Check prefix length bounds based on IP version
         let max_prefix = match network_addr {

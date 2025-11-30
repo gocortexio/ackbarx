@@ -107,7 +107,7 @@ impl LogRotationManager {
             .unwrap_or("log");
 
         // Create rotated filename
-        let rotated_filename = format!("{}.{}.{}", log_filename, timestamp, log_extension);
+        let rotated_filename = format!("{log_filename}.{timestamp}.{log_extension}");
         let rotated_path = log_dir.join(rotated_filename);
 
         // Rename current log file
